@@ -3,19 +3,20 @@ Inference Script - SQL Query Optimizer Environment
 Follows EXACT format required by hackathon judges.
 """
 
-import asyncio
 import os
 import textwrap
 from typing import List, Optional
 from openai import OpenAI
+import httpx
 
 # ─────────────────────────────────────────
 # ENV VARIABLES (mandatory as per spec)
 # ─────────────────────────────────────────
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-TASK_NAME = os.getenv("TASK_NAME", "task_easy")
+HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+
 BENCHMARK = "sql-query-optimizer"
 MAX_STEPS = 8
 TEMPERATURE = 0.3
@@ -32,7 +33,6 @@ def log_start(task: str, env: str, model: str) -> None:
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
     error_val = error if error else "null"
     done_val = str(done).lower()
-    # Clean action for single line logging
     action_clean = action.replace("\n", " ").strip()[:200]
     print(
         f"[STEP] step={step} action={action_clean} reward={reward:.2f} done={done_val} error={error_val}",
@@ -80,7 +80,6 @@ def build_user_prompt(
     history: List[str],
 ) -> str:
     history_block = "\n".join(history[-3:]) if history else "None"
-
     prompt = f"""
 TASK: {task_description}
 
@@ -100,7 +99,6 @@ ORIGINAL QUERY:
         prompt += f"\nHINT: {hint}\n"
     if history:
         prompt += f"\nPREVIOUS ATTEMPTS:\n{history_block}\n"
-
     prompt += f"\nStep {step} of {MAX_STEPS}. Write the corrected SQL query now:"
     return prompt.strip()
 
@@ -135,7 +133,6 @@ def get_sql_from_model(
             stream=False,
         )
         text = (completion.choices[0].message.content or "").strip()
-        # Clean any markdown if model adds it
         text = text.replace("```sql", "").replace("```", "").strip()
         return text if text else "SELECT 1;"
     except Exception as exc:
@@ -143,15 +140,8 @@ def get_sql_from_model(
         return "SELECT 1;"
 
 
-# ─────────────────────────────────────────
-# MAIN - runs one task episode
-# ─────────────────────────────────────────
-
 def run_task(task_id: str, base_url: str) -> dict:
-    """Run one full episode for a task against the live HF Space."""
-    import httpx
-
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     hf_url = base_url.rstrip("/")
 
     rewards: List[float] = []
@@ -163,7 +153,6 @@ def run_task(task_id: str, base_url: str) -> dict:
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        # Reset environment
         reset_resp = httpx.post(
             f"{hf_url}/reset",
             json={"task_id": task_id},
@@ -172,13 +161,7 @@ def run_task(task_id: str, base_url: str) -> dict:
         reset_resp.raise_for_status()
         obs = reset_resp.json()["observation"]
 
-        last_query = None
-        error_message = None
-        execution_time_ms = None
-        rows_returned = None
-
         for step in range(1, MAX_STEPS + 1):
-            # Get SQL from model
             sql_query = get_sql_from_model(
                 client=client,
                 task_description=obs["task_description"],
@@ -193,7 +176,6 @@ def run_task(task_id: str, base_url: str) -> dict:
                 history=history,
             )
 
-            # Submit action to environment
             step_resp = httpx.post(
                 f"{hf_url}/step",
                 json={"query": sql_query, "explanation": ""},
@@ -243,12 +225,8 @@ def run_task(task_id: str, base_url: str) -> dict:
     return {"task_id": task_id, "score": score, "success": success, "steps": steps_taken}
 
 
-# ─────────────────────────────────────────
-# ENTRY POINT - runs ALL 3 tasks
-# ─────────────────────────────────────────
-
 if __name__ == "__main__":
-    hf_space_url = os.getenv("HF_SPACE_URL", "http://localhost:7860")
+    hf_space_url = os.getenv("HF_SPACE_URL", "https://alokrajkumar-sql-query-optimizer.hf.space")
 
     tasks_to_run = ["task_easy", "task_medium", "task_hard"]
     all_results = []
@@ -257,7 +235,6 @@ if __name__ == "__main__":
         result = run_task(task_id, hf_space_url)
         all_results.append(result)
 
-    # Summary
     avg = sum(r["score"] for r in all_results) / len(all_results)
     print(f"\n[SUMMARY] average_score={avg:.3f}", flush=True)
     for r in all_results:
