@@ -315,9 +315,16 @@ def grade(task_id: str, query: str) -> Dict[str, Any]:
     if task_id not in GRADERS:
         raise ValueError(f"No grader for task: {task_id}")
     score, reason, details = GRADERS[task_id](query)
+    # Scores must be strictly between 0 and 1 (hackathon requirement)
+    score = round(max(0.01, min(0.99, score)), 3)
     return {
         "task_id": task_id,
-        "score": round(score, 3),
+        "score": score,
         "reason": reason,
         **details
     }
+
+
+def clamp_score(score: float) -> float:
+    """Ensure score is strictly between 0 and 1 as required by hackathon."""
+    return round(max(0.01, min(0.99, score)), 3)
