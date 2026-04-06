@@ -33,6 +33,16 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (order_id) REFERENCES orders(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
+CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY,
+    customer_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    rating INTEGER NOT NULL,
+    review_text TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
 """
 
 SEED_SQL = """
@@ -68,6 +78,15 @@ INSERT INTO order_items VALUES
 (6,5,1,1,999.99),
 (7,6,2,1,499.99),
 (8,7,3,2,199.99);
+
+INSERT INTO reviews VALUES
+(1,1,1,5,'Great laptop!','2024-01-20'),
+(2,2,3,4,'Good desk','2024-01-25'),
+(3,3,2,3,'Average phone','2024-02-20'),
+(4,4,1,5,'Excellent!','2024-03-10'),
+(5,5,2,4,'Good value','2024-03-20'),
+(6,1,5,5,'Love the monitor','2024-02-10'),
+(7,2,4,2,'Chair is uncomfortable','2024-01-30');
 """
 
 SCHEMA_DESCRIPTION = """
@@ -76,6 +95,7 @@ Tables:
 - products(id, name, category, price, stock)
 - orders(id, customer_id, created_at, status)
 - order_items(id, order_id, product_id, quantity, unit_price)
+- reviews(id, customer_id, product_id, rating, review_text, created_at)
 """
 
 
@@ -106,23 +126,20 @@ TASKS: Dict[str, Dict[str, Any]] = {
         "id": "task_easy",
         "difficulty": "easy",
         "max_steps": 5,
-        "name": "Fix the Broken Query",
+        "name": "Fix the Broken JOIN Query",
         "task_description": (
             "The following SQL query is supposed to return all customers from India "
             "who have placed at least one order. But it has a bug and returns wrong results. "
-            "Fix it so it returns the correct customers."
+            "Fix it so it returns the correct customers: Alice, Carol, Eve."
         ),
         "original_query": (
             "SELECT DISTINCT c.name, c.email "
             "FROM customers c, orders o "
             "WHERE c.country = 'India';"
         ),
-        "hint": "Check if the tables are properly joined.",
+        "hint": "Check if the tables are properly joined using ON clause.",
         "expected_row_check": lambda rows: (
-            {(r[0], r[1]) for r in rows} ==
-            {("Alice", "alice@email.com"),
-             ("Carol", "carol@email.com"),
-             ("Eve", "eve@email.com")}
+            {r[0] for r in rows} == {"Alice", "Carol", "Eve"}
         ),
     },
     "task_medium": {
@@ -132,7 +149,7 @@ TASKS: Dict[str, Dict[str, Any]] = {
         "name": "Eliminate the N+1 Subquery",
         "task_description": (
             "The query below finds customers along with their total spending. "
-            "It uses a correlated subquery which is slow. "
+            "It uses a correlated subquery which is slow (N+1 problem). "
             "Rewrite it using a JOIN and GROUP BY for better performance. "
             "Result must show customer name and total amount spent."
         ),
@@ -168,6 +185,45 @@ TASKS: Dict[str, Dict[str, Any]] = {
         "hint": "Use WITH monthly AS (...) then SELECT from it.",
         "expected_row_check": lambda rows: (
             len(rows) >= 1 and len(rows[0]) >= 3
+        ),
+    },
+    "task_medium_2": {
+        "id": "task_medium_2",
+        "difficulty": "medium",
+        "max_steps": 8,
+        "name": "Top Rated Products Per Category",
+        "task_description": (
+            "Write a query to find the highest rated product in each category. "
+            "Result must show: category, product name, average rating. "
+            "Only include products that have at least one review. "
+            "Order by average rating descending."
+        ),
+        "original_query": (
+            "SELECT category, name FROM products;"
+        ),
+        "hint": "JOIN products with reviews, GROUP BY category, use AVG(rating).",
+        "expected_row_check": lambda rows: (
+            len(rows) >= 1 and len(rows[0]) >= 3
+        ),
+    },
+    "task_hard_2": {
+        "id": "task_hard_2",
+        "difficulty": "hard",
+        "max_steps": 10,
+        "name": "Customer Lifetime Value with Window Functions",
+        "task_description": (
+            "Write a query to calculate customer lifetime value (CLV) ranking. "
+            "Show: customer name, country, total_spent, order_count, "
+            "and rank them by total_spent using ROW_NUMBER(). "
+            "Only include completed orders. "
+            "Order by total_spent descending."
+        ),
+        "original_query": (
+            "SELECT name FROM customers;"
+        ),
+        "hint": "Use JOIN + GROUP BY for totals, then ROW_NUMBER() OVER (ORDER BY total_spent DESC).",
+        "expected_row_check": lambda rows: (
+            len(rows) >= 1 and len(rows[0]) >= 4
         ),
     },
 }

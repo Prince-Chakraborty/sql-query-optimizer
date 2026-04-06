@@ -15,7 +15,7 @@ class SQLObservation(BaseModel):
     """Observation returned to the agent."""
     task_description: str = Field(description="What the agent needs to fix or optimize")
     original_query: str = Field(description="The original broken or slow SQL query")
-    schema: str = Field(description="Database schema the query runs against")
+    db_schema: str = Field(description="Database schema the query runs against")
     error_message: Optional[str] = Field(
         default=None,
         description="Error from last query attempt if any"
