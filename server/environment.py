@@ -39,7 +39,7 @@ class SQLOptimizerEnvironment:
         return SQLObservation(
             task_description=self.current_task["task_description"],
             original_query=self.current_task["original_query"],
-            schema=SCHEMA_DESCRIPTION,
+            db_schema=SCHEMA_DESCRIPTION,
             error_message=None,
             last_query=None,
             execution_time_ms=None,
@@ -82,7 +82,7 @@ class SQLOptimizerEnvironment:
         observation = SQLObservation(
             task_description=self.current_task["task_description"],
             original_query=self.current_task["original_query"],
-            schema=SCHEMA_DESCRIPTION,
+            db_schema=SCHEMA_DESCRIPTION,
             error_message=error,
             last_query=query,
             execution_time_ms=time_ms,

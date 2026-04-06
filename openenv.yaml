@@ -1,26 +1,35 @@
 name: sql-query-optimizer
 version: "1.0.0"
 description: >
-  A real-world OpenEnv environment where an AI agent learns to fix
-  and optimize SQL queries through actual SQLite execution feedback.
-  Tasks range from easy (fix broken JOIN) to hard (write CTE report).
+  A real-world OpenEnv environment where AI agents learn to fix and optimize
+  SQL queries through actual SQLite execution feedback. Unlike text-matching
+  environments, queries are actually executed and results validated.
 author: princechakraborty
 tags:
   - sql
   - database
   - optimization
   - real-world
+  - debugging
 tasks:
   - id: task_easy
-    name: "Fix the Broken Query"
+    name: "Fix the Broken JOIN Query"
     difficulty: easy
     max_steps: 5
   - id: task_medium
     name: "Eliminate the N+1 Subquery"
     difficulty: medium
     max_steps: 8
+  - id: task_medium_2
+    name: "Top Rated Products Per Category"
+    difficulty: medium
+    max_steps: 8
   - id: task_hard
     name: "Monthly Revenue Report with CTEs"
+    difficulty: hard
+    max_steps: 10
+  - id: task_hard_2
+    name: "Customer Lifetime Value with Window Functions"
     difficulty: hard
     max_steps: 10
 endpoints:
