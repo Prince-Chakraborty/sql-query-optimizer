@@ -10,12 +10,11 @@ from openai import OpenAI
 import httpx
 
 # ─────────────────────────────────────────
-# ENV VARIABLES (mandatory as per spec)
+# ENV VARIABLES - EXACTLY as hackathon requires
 # ─────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_KEY = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN", "")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 BENCHMARK = "sql-query-optimizer"
@@ -25,7 +24,7 @@ MAX_TOKENS = 512
 SUCCESS_SCORE_THRESHOLD = 0.5
 
 # ─────────────────────────────────────────
-# LOGGING (exact format required by judges)
+# LOGGING
 # ─────────────────────────────────────────
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -53,13 +52,6 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
 
 SYSTEM_PROMPT = textwrap.dedent("""
     You are an expert SQL engineer. Your job is to fix or optimize SQL queries.
-    
-    You will be given:
-    - A task description
-    - A database schema
-    - A broken or slow SQL query
-    - Feedback from previous attempts (if any)
-    
     Rules:
     - Reply with ONLY the corrected SQL query
     - No explanation, no markdown, no code blocks
@@ -74,13 +66,11 @@ def build_user_prompt(
     original_query: str,
     last_query: Optional[str],
     error_message: Optional[str],
-    execution_time_ms: Optional[float],
     rows_returned: Optional[int],
     hint: Optional[str],
     step: int,
     history: List[str],
 ) -> str:
-    history_block = "\n".join(history[-3:]) if history else "None"
     prompt = f"""
 TASK: {task_description}
 
@@ -99,7 +89,7 @@ ORIGINAL QUERY:
     if hint:
         prompt += f"\nHINT: {hint}\n"
     if history:
-        prompt += f"\nPREVIOUS ATTEMPTS:\n{history_block}\n"
+        prompt += f"\nPREVIOUS ATTEMPTS:\n" + "\n".join(history[-3:]) + "\n"
     prompt += f"\nStep {step} of {MAX_STEPS}. Write the corrected SQL query now:"
     return prompt.strip()
 
@@ -111,7 +101,6 @@ def get_sql_from_model(
     original_query: str,
     last_query: Optional[str],
     error_message: Optional[str],
-    execution_time_ms: Optional[float],
     rows_returned: Optional[int],
     hint: Optional[str],
     step: int,
@@ -119,8 +108,8 @@ def get_sql_from_model(
 ) -> str:
     user_prompt = build_user_prompt(
         task_description, schema, original_query,
-        last_query, error_message, execution_time_ms,
-        rows_returned, hint, step, history
+        last_query, error_message, rows_returned,
+        hint, step, history
     )
     try:
         completion = client.chat.completions.create(
@@ -142,9 +131,10 @@ def get_sql_from_model(
 
 
 def run_task(task_id: str, base_url: str) -> dict:
+    # EXACTLY as hackathon requires
     client = OpenAI(
-        base_url=os.environ.get("API_BASE_URL", API_BASE_URL),
-        api_key=os.environ.get("API_KEY") or os.environ.get("HF_TOKEN", "")
+        base_url=os.environ["API_BASE_URL"],
+        api_key=os.environ["API_KEY"]
     )
     hf_url = base_url.rstrip("/")
 
@@ -169,11 +159,10 @@ def run_task(task_id: str, base_url: str) -> dict:
             sql_query = get_sql_from_model(
                 client=client,
                 task_description=obs["task_description"],
-                schema=obs["schema"],
+                schema=obs.get("db_schema", obs.get("schema", "")),
                 original_query=obs["original_query"],
                 last_query=obs.get("last_query"),
                 error_message=obs.get("error_message"),
-                execution_time_ms=obs.get("execution_time_ms"),
                 rows_returned=obs.get("rows_returned"),
                 hint=obs.get("hint"),
                 step=step,
@@ -230,7 +219,10 @@ def run_task(task_id: str, base_url: str) -> dict:
 
 
 if __name__ == "__main__":
-    hf_space_url = os.getenv("HF_SPACE_URL", "https://alokrajkumar-sql-query-optimizer.hf.space")
+    hf_space_url = os.getenv(
+        "HF_SPACE_URL",
+        "https://alokrajkumar-sql-query-optimizer.hf.space"
+    )
 
     tasks_to_run = ["task_easy", "task_medium", "task_hard"]
     all_results = []
