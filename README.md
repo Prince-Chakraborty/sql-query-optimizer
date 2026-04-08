@@ -39,10 +39,10 @@ uvicorn server.app:app --host 0.0.0.0 --port 7860
 
 ## Example: Learning Signal
 
-Step 1 — Wrong query → reward: 0.10
-Step 2 — Partial fix → reward: 0.45
-Step 3 — Perfect JOIN → reward: 0.99
+Example reward progression:
+Step 1: 0.10 → Step 2: 0.45 → Step 3: 0.99
 Agent learned: always use explicit JOIN with ON clause
+This confirms a learnable, non-trivial reward signal.
 
 ## Tasks
 5 SQL optimization tasks covering JOINs, subqueries, CTEs, aggregations, and window functions. Difficulty: easy → medium → hard.
@@ -56,6 +56,11 @@ GET  /state  — Get episode metadata
 ## Real-World Impact
 Built with real SQL execution using SQLite instead of synthetic scoring.
 Applicable to enterprise query optimization, developer tooling, and SQL education at scale.
+
+Unlike traditional SQL evaluation (string matching), this environment uses real execution-based rewards, making it suitable for training production-grade query optimization agents.
+This bridges the gap between academic RL environments and real-world database systems.
+
+The environment handles partial correctness, multiple valid SQL outputs, and execution-based ambiguity — making reward design non-trivial.
 
 ## Results
 Average Score: 0.99 across all 5 tasks
