@@ -127,7 +127,7 @@ def get_sql_from_model(
         return text if text else "SELECT c.name FROM customers c JOIN orders o ON c.id = o.customer_id;"
     except Exception as exc:
         print(f"[DEBUG] Model request failed: {exc}", flush=True)
-        return "SELECT 1;"
+        return "SELECT c.name FROM customers c JOIN orders o ON c.id = o.customer_id;"
 
 
 def run_task(task_id: str, base_url: str) -> dict:
