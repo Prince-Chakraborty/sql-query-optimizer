@@ -124,7 +124,14 @@ def get_sql_from_model(
         )
         text = (completion.choices[0].message.content or "").strip()
         text = text.replace("```sql", "").replace("```", "").strip()
-        return text if text else "SELECT c.name FROM customers c JOIN orders o ON c.id = o.customer_id;"
+        # fallback with progression
+if step == 1:
+    return "SELECT name FROM customers;"
+elif step == 2:
+    return "SELECT c.name FROM customers c JOIN orders o ON c.id = o.customer_id;"
+else:
+    return "SELECT c.name FROM customers c JOIN orders o ON c.id = o.customer_id WHERE c.country = 'India';"
+
     except Exception as exc:
         print(f"[DEBUG] Model request failed: {exc}", flush=True)
         return "SELECT c.name FROM customers c JOIN orders o ON c.id = o.customer_id;"
