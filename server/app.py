@@ -123,6 +123,8 @@ def reset(request: ResetRequest = ResetRequest()):
         obs = env.reset(task_id=request.task_id or "task_easy")
         return {
             "observation": obs.model_dump(),
+            "reward": 0.0,
+            "done": False,
             "episode_id": env.episode_id,
             "task_id": env.task_id,
         }

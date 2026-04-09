@@ -66,12 +66,12 @@ class SQLOptimizerEnvironment:
         score = result["score"]
         reason = result["reason"]
 
-        reward = max(0.0, score - self.best_score)
-        if score > self.best_score:
-            self.best_score = score
+        # Reward = score directly (stable, learnable signal)
+        reward = score
+        self.best_score = max(self.best_score, score)
 
         if error:
-            reward = -0.05
+            reward = 0.01
 
         self.total_reward += reward
 
